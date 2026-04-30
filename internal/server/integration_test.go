@@ -24,8 +24,9 @@ import (
 // By default this runs for 60s. To run a shorter test in CI, run `go test -short` to skip it.
 // You can override duration in seconds using the MERKLE_BENCH_DURATION environment variable.
 func TestIntegrationRate(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration rate test in short mode")
+	// Skip by default; run only when explicitly enabled to avoid long test runs during `go test ./...`.
+	if os.Getenv("MERKLE_RUN_INTEGRATION") != "1" {
+		t.Skip("integration test disabled; set MERKLE_RUN_INTEGRATION=1 to run")
 	}
 
 	// duration (seconds)

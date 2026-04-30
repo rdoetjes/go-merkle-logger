@@ -126,4 +126,11 @@ Notes & recommendations
 - Performance: the service fsyncs after each write for durability. For higher throughput, consider batching or background flush with configurable durability tradeoffs.
 - Proto code: this demo includes hand-written stub proto types and a JSON codec for simplicity. For production, generate proper Go protobufs with `protoc` + plugins.
 
+
+## CI
+
+This repository includes a GitHub Actions workflow at `.github/workflows/ci.yml` that runs `go test ./...` on push and pull requests to `main` and uploads a coverage artifact.
+
+![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)
+
 License: MIT

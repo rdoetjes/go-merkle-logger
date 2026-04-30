@@ -28,3 +28,4 @@ merkle-client
 merkle-checker
 merkle-bench
 *.log
+*.pem

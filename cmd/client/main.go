@@ -15,28 +15,42 @@ import (
 	"phonax.com/merkle/proto"
 )
 
-func main() {
+func parseClientFlags() (string, string) {
 	addr := flag.String("addr", "localhost:8443", "server address")
 	cafile := flag.String("ca", "", "CA cert for server TLS")
 	flag.Parse()
+	return *addr, *cafile
+}
 
+func buildDialOptions(cafile string) ([]grpc.DialOption, error) {
 	var opts []grpc.DialOption
 	// Use JSON codec registered in proto package by setting call content subtype
 	opts = append(opts, grpc.WithDefaultCallOptions(grpc.CallContentSubtype("json")))
-	if *cafile != "" {
-		b, err := ioutil.ReadFile(*cafile)
+	if cafile != "" {
+		b, err := ioutil.ReadFile(cafile)
 		if err != nil {
-			log.Fatalf("read ca: %v", err)
+			return nil, err
 		}
 		cpool := x509.NewCertPool()
-		cpool.AppendCertsFromPEM(b)
+		if !cpool.AppendCertsFromPEM(b) {
+			return nil, fmt.Errorf("failed to append CA certs")
+		}
 		creds := credentials.NewClientTLSFromCert(cpool, "")
 		opts = append(opts, grpc.WithTransportCredentials(creds))
 	} else {
 		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})))
 	}
+	return opts, nil
+}
 
-	conn, err := grpc.Dial(*addr, opts...)
+func main() {
+	addr, cafile := parseClientFlags()
+	opts, err := buildDialOptions(cafile)
+	if err != nil {
+		log.Fatalf("failed to build dial opts: %v", err)
+	}
+
+	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		log.Fatalf("dial: %v", err)
 	}
