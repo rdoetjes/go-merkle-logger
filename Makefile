@@ -57,7 +57,7 @@ run-client:
 
 test: proto
 	@echo "running tests (no cache)"
-	go test -count=1 ./...
+	go test -v -count=1 ./...
 
 integration:
 	@echo "Running integration rate test (this may take a while). To run shorter use: go test -run TestIntegrationRate -short"
