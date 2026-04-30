@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -46,53 +47,83 @@ func NewService(cfg Config) (*Service, error) {
 	}
 
 	s := &Service{cfg: cfg}
-	// load or generate HMAC key (in real deployments, this should be loaded from KMS/secret store)
+
+	// load HMAC key
+	s.hmacKey = loadHMACKey()
+
+	// initialize backend-specific resources
+	if cfg.Backend == "file" {
+		if err := s.initFileBackend(); err != nil {
+			return nil, err
+		}
+	}
+
+	return s, nil
+}
+
+// loadHMACKey reads HMAC key from env or returns a demo key
+func loadHMACKey() []byte {
 	k := os.Getenv("MERKLE_HMAC_KEY")
 	if k == "" {
 		// generate a random key (not cryptographically secure here for demo)
 		k = "demo-key-please-change"
 	}
-	s.hmacKey = []byte(k)
+	return []byte(k)
+}
 
-	if cfg.Backend == "file" {
-		if err := os.MkdirAll(filepath.Dir(cfg.LogFile), 0700); err != nil {
-			return nil, err
-		}
-		// If a file already exists at the configured log path, rename it to preserve old logs
-		// New name: <basename>-<isodatetimestamp><ext> (if ext missing, .log is used)
-		if fi, err := os.Stat(cfg.LogFile); err == nil && !fi.IsDir() {
-			// file exists, compute new name
-			ext := filepath.Ext(cfg.LogFile)
-			base := strings.TrimSuffix(cfg.LogFile, ext)
-			if ext == "" {
-				ext = ".log"
-			}
-			ts := time.Now().UTC().Format("2006-01-02T15-04-05Z")
-			newName := fmt.Sprintf("%s-%s%s", base, ts, ext)
-			// Attempt to rename; if it fails we'll log and continue (server will append to existing file)
-			if err := os.Rename(cfg.LogFile, newName); err != nil {
-				log.Printf("warning: failed to rename existing log file %s -> %s: %v", cfg.LogFile, newName, err)
-			} else {
-				log.Printf("existing log file renamed: %s -> %s", cfg.LogFile, newName)
-			}
-		} else if err != nil && !os.IsNotExist(err) {
-			// unexpected stat error
-			log.Printf("warning: could not stat log file %s: %v", cfg.LogFile, err)
-		}
-
-		f, err := os.OpenFile(cfg.LogFile, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
-		if err != nil {
-			return nil, err
-		}
-		s.f = f
-		// attempt to restore last sequence and hash from file tail
-		if err := s.restoreState(); err != nil {
-			// log but continue from zero
-			log.Printf("warning: could not restore state: %v", err)
-		}
+// initFileBackend prepares the directory, rotates any existing logfile, opens the new file and restores state
+func (s *Service) initFileBackend() error {
+	if err := os.MkdirAll(filepath.Dir(s.cfg.LogFile), 0700); err != nil {
+		return err
 	}
 
-	return s, nil
+	// rotate existing file if present
+	if err := rotateExistingLog(s.cfg.LogFile); err != nil {
+		// rotation errors are non-fatal; they are logged inside rotateExistingLog
+		// continue to open the file below
+	}
+
+	f, err := os.OpenFile(s.cfg.LogFile, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
+	if err != nil {
+		return err
+	}
+	s.f = f
+
+	// attempt to restore last sequence and hash from file tail
+	if err := s.restoreState(); err != nil {
+		// log but continue from zero
+		log.Printf("warning: could not restore state: %v", err)
+	}
+	return nil
+}
+
+// rotateExistingLog renames an existing logfile to a timestamped name. It logs warnings on failure but does not return fatal errors.
+func rotateExistingLog(path string) error {
+	fi, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		log.Printf("warning: could not stat log file %s: %v", path, err)
+		return err
+	}
+	if fi.IsDir() {
+		return nil
+	}
+
+	ext := filepath.Ext(path)
+	base := strings.TrimSuffix(path, ext)
+	if ext == "" {
+		ext = ".log"
+	}
+	ts := time.Now().UTC().Format("2006-01-02T15-04-05Z")
+	newName := fmt.Sprintf("%s-%s%s", base, ts, ext)
+	if err := os.Rename(path, newName); err != nil {
+		log.Printf("warning: failed to rename existing log file %s -> %s: %v", path, newName, err)
+		return err
+	}
+	log.Printf("existing log file renamed: %s -> %s", path, newName)
+	return nil
 }
 
 func (s *Service) Close() error {
@@ -218,17 +249,24 @@ func (s *Service) appendToFile(entry []byte) error {
 }
 
 // restoreState loads last entry to set s.seq and s.prevHash
+// This function is tolerant: if the file is empty or the tail doesn't contain a complete
+// JSON entry (e.g., newly rotated file or truncated write), it will treat the state as
+// "no previous entries" instead of returning an error.
 func (s *Service) restoreState() error {
 	if s.f == nil {
 		return errors.New("file not initialized")
 	}
 
-	// attempt to read last 32KB
+	// attempt to read last 32KB (or whole file if smaller)
 	stat, err := s.f.Stat()
 	if err != nil {
 		return err
 	}
 	size := stat.Size()
+	if size == 0 {
+		// nothing to restore
+		return nil
+	}
 	var start int64 = 0
 	if size > 32768 {
 		start = size - 32768
@@ -238,21 +276,41 @@ func (s *Service) restoreState() error {
 		return err
 	}
 
-	// find last newline
-	idx := int64(-1)
-	for i := int64(len(buf)) - 1; i >= 0; i-- {
-		if buf[i] == '\n' {
-			idx = i
-			break
+	// find last newline; if none, try to parse entire buffer as a single entry
+	idx := bytes.LastIndexByte(buf, '\n')
+	var last []byte
+	if idx == -1 {
+		// no newline: the buffer might contain a single truncated or single-line entry
+		trim := bytes.TrimSpace(buf)
+		if len(trim) == 0 {
+			// nothing to restore
+			return nil
+		}
+		last = trim
+	} else {
+		last = buf[idx+1:]
+		if len(bytes.TrimSpace(last)) == 0 {
+			// trailing newline but nothing after it; try to find previous non-empty line
+			buf2 := bytes.TrimRight(buf[:idx], "\n")
+			idx2 := bytes.LastIndexByte(buf2, '\n')
+			if idx2 == -1 {
+				last = bytes.TrimSpace(buf2)
+			} else {
+				last = bytes.TrimSpace(buf2[idx2+1:])
+			}
 		}
 	}
-	if idx == -1 {
-		return errors.New("no complete log entry found")
+
+	if len(last) == 0 {
+		// no complete entry found; nothing to restore
+		return nil
 	}
-	last := buf[idx+1:]
+
 	var entry map[string]interface{}
 	if err := json.Unmarshal(last, &entry); err != nil {
-		return err
+		// malformed last entry: treat as "no restore" rather than fatal
+		log.Printf("warning: could not parse last log entry during restore: %v", err)
+		return nil
 	}
 	if seqv, ok := entry["sequence"].(float64); ok {
 		s.seq = int64(seqv)
