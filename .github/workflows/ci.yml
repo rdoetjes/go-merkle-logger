@@ -29,8 +29,17 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
-      - name: Generate protobuf code
+      - name: Generate protobuf code (debug)
         run: |
+          # Debug: show repo root and proto dir contents
+          echo "PWD: $(pwd)"
+          echo "Listing repo root:"
+          ls -la
+          echo "Listing proto dir if exists:"
+          ls -la proto || true
+          echo "Finding proto files:"
+          find proto -name '*.proto' -print || true
+
           # Install protoc compiler
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler
