@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.3.0
 // - protoc             v7.34.1
-// source: merkle/logging/logging.proto
+// source: logging.proto
 
 package proto
 
@@ -142,5 +142,5 @@ var Logger_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "merkle/logging/logging.proto",
+	Metadata: "logging.proto",
 }

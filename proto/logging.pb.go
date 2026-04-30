@@ -2,13 +2,14 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v7.34.1
-// source: merkle/logging/logging.proto
+// source: logging.proto
 
 package proto
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	_ "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -33,7 +34,7 @@ type LogRequest struct {
 
 func (x *LogRequest) Reset() {
 	*x = LogRequest{}
-	mi := &file_merkle_logging_logging_proto_msgTypes[0]
+	mi := &file_logging_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -45,7 +46,7 @@ func (x *LogRequest) String() string {
 func (*LogRequest) ProtoMessage() {}
 
 func (x *LogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_merkle_logging_logging_proto_msgTypes[0]
+	mi := &file_logging_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -58,7 +59,7 @@ func (x *LogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogRequest.ProtoReflect.Descriptor instead.
 func (*LogRequest) Descriptor() ([]byte, []int) {
-	return file_merkle_logging_logging_proto_rawDescGZIP(), []int{0}
+	return file_logging_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *LogRequest) GetApplication() string {
@@ -99,7 +100,7 @@ type LogResponse struct {
 
 func (x *LogResponse) Reset() {
 	*x = LogResponse{}
-	mi := &file_merkle_logging_logging_proto_msgTypes[1]
+	mi := &file_logging_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -111,7 +112,7 @@ func (x *LogResponse) String() string {
 func (*LogResponse) ProtoMessage() {}
 
 func (x *LogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_merkle_logging_logging_proto_msgTypes[1]
+	mi := &file_logging_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -124,7 +125,7 @@ func (x *LogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogResponse.ProtoReflect.Descriptor instead.
 func (*LogResponse) Descriptor() ([]byte, []int) {
-	return file_merkle_logging_logging_proto_rawDescGZIP(), []int{1}
+	return file_logging_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *LogResponse) GetOk() bool {
@@ -151,7 +152,7 @@ type VerifyRequest struct {
 
 func (x *VerifyRequest) Reset() {
 	*x = VerifyRequest{}
-	mi := &file_merkle_logging_logging_proto_msgTypes[2]
+	mi := &file_logging_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -163,7 +164,7 @@ func (x *VerifyRequest) String() string {
 func (*VerifyRequest) ProtoMessage() {}
 
 func (x *VerifyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_merkle_logging_logging_proto_msgTypes[2]
+	mi := &file_logging_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -176,7 +177,7 @@ func (x *VerifyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyRequest.ProtoReflect.Descriptor instead.
 func (*VerifyRequest) Descriptor() ([]byte, []int) {
-	return file_merkle_logging_logging_proto_rawDescGZIP(), []int{2}
+	return file_logging_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *VerifyRequest) GetStartSequence() uint64 {
@@ -203,7 +204,7 @@ type VerifyResponse struct {
 
 func (x *VerifyResponse) Reset() {
 	*x = VerifyResponse{}
-	mi := &file_merkle_logging_logging_proto_msgTypes[3]
+	mi := &file_logging_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -215,7 +216,7 @@ func (x *VerifyResponse) String() string {
 func (*VerifyResponse) ProtoMessage() {}
 
 func (x *VerifyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_merkle_logging_logging_proto_msgTypes[3]
+	mi := &file_logging_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -228,7 +229,7 @@ func (x *VerifyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyResponse.ProtoReflect.Descriptor instead.
 func (*VerifyResponse) Descriptor() ([]byte, []int) {
-	return file_merkle_logging_logging_proto_rawDescGZIP(), []int{3}
+	return file_logging_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *VerifyResponse) GetOk() bool {
@@ -245,11 +246,11 @@ func (x *VerifyResponse) GetError() string {
 	return ""
 }
 
-var File_merkle_logging_logging_proto protoreflect.FileDescriptor
+var File_logging_proto protoreflect.FileDescriptor
 
-const file_merkle_logging_logging_proto_rawDesc = "" +
+const file_logging_proto_rawDesc = "" +
 	"\n" +
-	"\x1cmerkle/logging/logging.proto\x12\x0emerkle.logging\"\xd9\x01\n" +
+	"\rlogging.proto\x12\x0emerkle.logging\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd9\x01\n" +
 	"\n" +
 	"LogRequest\x12 \n" +
 	"\vapplication\x18\x01 \x01(\tR\vapplication\x12\x14\n" +
@@ -273,26 +274,26 @@ const file_merkle_logging_logging_proto_rawDesc = "" +
 	"\x06Verify\x12\x1d.merkle.logging.VerifyRequest\x1a\x1e.merkle.logging.VerifyResponseB\x1fZ\x1dphonax.com/merkle/proto;protob\x06proto3"
 
 var (
-	file_merkle_logging_logging_proto_rawDescOnce sync.Once
-	file_merkle_logging_logging_proto_rawDescData []byte
+	file_logging_proto_rawDescOnce sync.Once
+	file_logging_proto_rawDescData []byte
 )
 
-func file_merkle_logging_logging_proto_rawDescGZIP() []byte {
-	file_merkle_logging_logging_proto_rawDescOnce.Do(func() {
-		file_merkle_logging_logging_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_merkle_logging_logging_proto_rawDesc), len(file_merkle_logging_logging_proto_rawDesc)))
+func file_logging_proto_rawDescGZIP() []byte {
+	file_logging_proto_rawDescOnce.Do(func() {
+		file_logging_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_logging_proto_rawDesc), len(file_logging_proto_rawDesc)))
 	})
-	return file_merkle_logging_logging_proto_rawDescData
+	return file_logging_proto_rawDescData
 }
 
-var file_merkle_logging_logging_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
-var file_merkle_logging_logging_proto_goTypes = []any{
+var file_logging_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_logging_proto_goTypes = []any{
 	(*LogRequest)(nil),     // 0: merkle.logging.LogRequest
 	(*LogResponse)(nil),    // 1: merkle.logging.LogResponse
 	(*VerifyRequest)(nil),  // 2: merkle.logging.VerifyRequest
 	(*VerifyResponse)(nil), // 3: merkle.logging.VerifyResponse
 	nil,                    // 4: merkle.logging.LogRequest.FieldsEntry
 }
-var file_merkle_logging_logging_proto_depIdxs = []int32{
+var file_logging_proto_depIdxs = []int32{
 	4, // 0: merkle.logging.LogRequest.fields:type_name -> merkle.logging.LogRequest.FieldsEntry
 	0, // 1: merkle.logging.Logger.Write:input_type -> merkle.logging.LogRequest
 	2, // 2: merkle.logging.Logger.Verify:input_type -> merkle.logging.VerifyRequest
@@ -305,26 +306,26 @@ var file_merkle_logging_logging_proto_depIdxs = []int32{
 	0, // [0:1] is the sub-list for field type_name
 }
 
-func init() { file_merkle_logging_logging_proto_init() }
-func file_merkle_logging_logging_proto_init() {
-	if File_merkle_logging_logging_proto != nil {
+func init() { file_logging_proto_init() }
+func file_logging_proto_init() {
+	if File_logging_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_merkle_logging_logging_proto_rawDesc), len(file_merkle_logging_logging_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_logging_proto_rawDesc), len(file_logging_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_merkle_logging_logging_proto_goTypes,
-		DependencyIndexes: file_merkle_logging_logging_proto_depIdxs,
-		MessageInfos:      file_merkle_logging_logging_proto_msgTypes,
+		GoTypes:           file_logging_proto_goTypes,
+		DependencyIndexes: file_logging_proto_depIdxs,
+		MessageInfos:      file_logging_proto_msgTypes,
 	}.Build()
-	File_merkle_logging_logging_proto = out.File
-	file_merkle_logging_logging_proto_goTypes = nil
-	file_merkle_logging_logging_proto_depIdxs = nil
+	File_logging_proto = out.File
+	file_logging_proto_goTypes = nil
+	file_logging_proto_depIdxs = nil
 }
