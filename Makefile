@@ -16,20 +16,9 @@ proto: install-proto-tools
 	# Clean any previously generated stray files that can confuse imports
 	@rm -rf phonax.com merkle/logging || true
 	# Generate into the proto/ directory using source-relative paths so generated files are placed under proto/...
-	@PROTOS=`find proto -name "*.proto" -print`; \
-	if [ -z "$$PROTOS" ]; then \
-		echo "no proto files found, skipping"; \
-	else \
-		echo "protoc will run on: $$PROTOS"; \
-		for p in $$PROTOS; do \
-			protoc -I proto --go_out=paths=source_relative:./proto --go-grpc_out=paths=source_relative:./proto "$$p" || exit 2; \
-		done; \
-		# Flatten generated files for simpler imports: move generated pb.go from proto/merkle/logging -> proto/
-		if [ -d "proto/merkle/logging" ]; then \
-			mv proto/merkle/logging/*.pb.go proto/ || true; \
-			rm -rf proto/merkle; \
-		fi; \
-	fi
+	# Use helper script to generate protos robustly
+	@chmod +x scripts/generate_protos.sh
+	@./scripts/generate_protos.sh
 
 install-proto-tools:
 	@echo "Installing protoc-gen-go and protoc-gen-go-grpc into $(go env GOPATH)/bin or $(go env GOBIN)"
