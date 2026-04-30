@@ -36,6 +36,13 @@ func parseArgs() config {
 		}
 	}
 
+	// If flag not provided, fallback to env MERKLE_HMAC_KEY (raw or base64). This mirrors server behavior.
+	if *hmacKey == "" {
+		if env := os.Getenv("MERKLE_HMAC_KEY"); env != "" {
+			*hmacKey = env
+		}
+	}
+
 	return config{file: *file, hmacKey: *hmacKey, printLines: *printEntries}
 }
 
