@@ -12,8 +12,16 @@ build: proto
 	go build -o merkle-bench ./cmd/bench
 
 proto: install-proto-tools
-	@echo "generating go files from proto/*.proto"
-	protoc --go_out=. --go-grpc_out=. proto/*.proto
+	@echo "generating go files from proto/**/*.proto"
+	# Clean any previously generated stray files that can confuse imports
+	@rm -rf phonax.com merkle/logging || true
+	# Generate into the proto/ directory using source-relative paths so generated files are placed under proto/...
+	protoc -I proto --go_out=paths=source_relative:./proto --go-grpc_out=paths=source_relative:./proto $(shell find proto -name '*.proto')
+	# Flatten generated files for simpler imports: move generated pb.go from proto/merkle/logging -> proto/
+	@if [ -d "proto/merkle/logging" ]; then \
+		mv proto/merkle/logging/*.pb.go proto/ || true; \
+		rm -rf proto/merkle; \
+	fi
 
 install-proto-tools:
 	@echo "Installing protoc-gen-go and protoc-gen-go-grpc into $(go env GOPATH)/bin or $(go env GOBIN)"

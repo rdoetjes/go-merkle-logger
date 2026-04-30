@@ -1,0 +1,10 @@
+# protolint configuration - minimal
+# This config tells protolint to lint proto files under the `proto/` directory
+# and to use the default rule set. Customize rules as needed.
+
+files:
+  - "proto/**/*.proto"
+
+rules:
+  use:
+    - DEFAULT

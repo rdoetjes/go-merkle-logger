@@ -1,0 +1,5 @@
+version: v1
+name: phonax.com/merkle
+build:
+  roots:
+    - proto
