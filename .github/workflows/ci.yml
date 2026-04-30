@@ -31,8 +31,13 @@ jobs:
 
       - name: Generate protobuf code
         run: |
-          protoc --version || true
-          protoc --go_out=. --go-grpc_out=. proto/*.proto
+          # Install protoc compiler
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+          # Ensure GOPATH/bin is in PATH so installed protoc-gen-* are discoverable
+          export PATH="$PATH:$(go env GOPATH)/bin"
+          # Install codegen plugins and generate code via Makefile target
+          make proto
 
       - name: Run tests
         run: go test -v ./...
