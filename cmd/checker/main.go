@@ -1,0 +1,87 @@
+package main
+
+import (
+	"flag"
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"phonax.com/merkle/internal/checker"
+)
+
+// CLI config parsed from flags/args
+type config struct {
+	file       string
+	hmacKey    string
+	printLines bool
+}
+
+func parseArgs() config {
+	file := flag.String("file", "./protected.log", "path to protected log file")
+	hmacKey := flag.String("hmac-key", "", "HMAC key for signature verification (base64 or raw)")
+	printEntries := flag.Bool("print", false, "print entries as parsed")
+	flag.Parse()
+
+	// Choose the first existing non-flag argument as filename if provided
+	for _, a := range os.Args[1:] {
+		if strings.HasPrefix(a, "-") {
+			continue
+		}
+		if _, err := os.Stat(a); err == nil {
+			*file = a
+			break
+		}
+	}
+
+	return config{file: *file, hmacKey: *hmacKey, printLines: *printEntries}
+}
+
+func printUsageAndExit() {
+	fmt.Fprintf(os.Stderr, "Usage: merkle-checker [flags] [logfile]\n")
+	flag.PrintDefaults()
+	os.Exit(2)
+}
+
+func printFileInfo(path string) {
+	abs, _ := filepath.Abs(path)
+	fmt.Printf("Checking file: %s\n", abs)
+}
+
+func main() {
+	cfg := parseArgs()
+	if cfg.file == "" {
+		printUsageAndExit()
+	}
+	printFileInfo(cfg.file)
+
+	// Optional: print entries (simple dump) before verification
+	if cfg.printLines {
+		// lightweight: open file and print lines
+		f, err := os.Open(cfg.file)
+		if err != nil {
+			log.Fatalf("open file for print: %v", err)
+		}
+		defer f.Close()
+		// print raw lines
+		buf := make([]byte, 4096)
+		for {
+			n, err := f.Read(buf)
+			if n > 0 {
+				os.Stdout.Write(buf[:n])
+			}
+			if err != nil {
+				break
+			}
+		}
+	}
+
+	// run the checker
+	err := checker.CheckFile(cfg.file, cfg.hmacKey)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "FAILED: checker: %v\n", err)
+		os.Exit(3)
+	}
+	fmt.Println("OK: Log file is consistent")
+}

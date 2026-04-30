@@ -1,0 +1,30 @@
+# Go build / editor files
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Vendor
+/vendor/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go env files
+go.work
+
+# Keep source control clean - ignore build artifacts and logs
+merkle-server
+merkle-client
+merkle-checker
+merkle-bench
+*.log
