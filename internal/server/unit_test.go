@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"phonax.com/merkle/merklelog"
 	"phonax.com/merkle/proto"
 )
 
@@ -81,8 +82,9 @@ func TestAppendToFileAndRestoreState(t *testing.T) {
 	s.f = f
 	defer s.Close()
 
-	entry := []byte("{\"sequence\":1}\n")
-	require.NoError(t, s.appendToFile(entry))
+	// use merklelog.AppendToFile helper to write an entry
+	_, _, err = merklelog.AppendToFile(s.f, 1, nil, map[string]interface{}{"sequence": 1}, s.hmacKey)
+	require.NoError(t, err)
 	// close and reopen service to restore
 	s.f.Close()
 	s2, err := NewService(Config{Backend: "file", LogFile: p})

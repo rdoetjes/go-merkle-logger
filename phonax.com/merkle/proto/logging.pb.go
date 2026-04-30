@@ -144,8 +144,8 @@ func (x *LogResponse) GetError() string {
 
 type VerifyRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	StartSequence int64                  `protobuf:"varint,1,opt,name=start_sequence,json=startSequence,proto3" json:"start_sequence,omitempty"`
-	EndSequence   int64                  `protobuf:"varint,2,opt,name=end_sequence,json=endSequence,proto3" json:"end_sequence,omitempty"`
+	StartSequence uint64                 `protobuf:"varint,1,opt,name=start_sequence,json=startSequence,proto3" json:"start_sequence,omitempty"`
+	EndSequence   uint64                 `protobuf:"varint,2,opt,name=end_sequence,json=endSequence,proto3" json:"end_sequence,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -180,14 +180,14 @@ func (*VerifyRequest) Descriptor() ([]byte, []int) {
 	return file_proto_logging_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *VerifyRequest) GetStartSequence() int64 {
+func (x *VerifyRequest) GetStartSequence() uint64 {
 	if x != nil {
 		return x.StartSequence
 	}
 	return 0
 }
 
-func (x *VerifyRequest) GetEndSequence() int64 {
+func (x *VerifyRequest) GetEndSequence() uint64 {
 	if x != nil {
 		return x.EndSequence
 	}
@@ -264,8 +264,8 @@ const file_proto_logging_proto_rawDesc = "" +
 	"\x02ok\x18\x01 \x01(\bR\x02ok\x12\x14\n" +
 	"\x05error\x18\x02 \x01(\tR\x05error\"Y\n" +
 	"\rVerifyRequest\x12%\n" +
-	"\x0estart_sequence\x18\x01 \x01(\x03R\rstartSequence\x12!\n" +
-	"\fend_sequence\x18\x02 \x01(\x03R\vendSequence\"6\n" +
+	"\x0estart_sequence\x18\x01 \x01(\x04R\rstartSequence\x12!\n" +
+	"\fend_sequence\x18\x02 \x01(\x04R\vendSequence\"6\n" +
 	"\x0eVerifyResponse\x12\x0e\n" +
 	"\x02ok\x18\x01 \x01(\bR\x02ok\x12\x14\n" +
 	"\x05error\x18\x02 \x01(\tR\x05error2\x93\x01\n" +

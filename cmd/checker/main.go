@@ -3,12 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"phonax.com/merkle/internal/checker"
+	"phonax.com/merkle/merklelog"
 )
 
 // CLI config parsed from flags/args
@@ -56,32 +57,32 @@ func main() {
 	}
 	printFileInfo(cfg.file)
 
-	// Optional: print entries (simple dump) before verification
+	// If print-only requested, stream file to stdout
 	if cfg.printLines {
-		// lightweight: open file and print lines
 		f, err := os.Open(cfg.file)
 		if err != nil {
 			log.Fatalf("open file for print: %v", err)
 		}
 		defer f.Close()
-		// print raw lines
-		buf := make([]byte, 4096)
-		for {
-			n, err := f.Read(buf)
-			if n > 0 {
-				os.Stdout.Write(buf[:n])
-			}
-			if err != nil {
-				break
-			}
-		}
+		io.Copy(os.Stdout, f)
+		return
 	}
 
-	// run the checker
-	err := checker.CheckFile(cfg.file, cfg.hmacKey)
+	// Verify using streaming reader
+	f, err := os.Open(cfg.file)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "FAILED: checker: %v\n", err)
+		log.Fatalf("open file: %v", err)
+	}
+	defer f.Close()
+
+	res, err := merklelog.VerifyReader(f, merklelog.VerifyOptions{HMACKey: []byte(cfg.hmacKey)})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "FAILED: checker I/O: %v\n", err)
+		os.Exit(4)
+	}
+	if !res.OK {
+		fmt.Fprintf(os.Stderr, "FAILED: checker: %v (checked %d lines)\n", res.FirstErr, res.Count)
 		os.Exit(3)
 	}
-	fmt.Println("OK: Log file is consistent")
+	fmt.Printf("OK: Log file consistent (checked %d lines)\n", res.Count)
 }

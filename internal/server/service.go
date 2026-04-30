@@ -3,9 +3,6 @@ package server
 import (
 	"bytes"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -20,6 +17,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"phonax.com/merkle/merklelog"
 	"phonax.com/merkle/proto"
 )
 
@@ -35,7 +33,7 @@ type Service struct {
 	cfg      Config
 	mu       sync.Mutex // protects chain state and file
 	f        *os.File
-	seq      int64
+	seq      uint64
 	prevHash []byte
 	hmacKey  []byte
 }
@@ -149,30 +147,31 @@ func (s *Service) Write(ctx context.Context, req *proto.LogRequest) (*proto.LogR
 	prev := make([]byte, len(s.prevHash))
 	copy(prev, s.prevHash)
 
-	// build entry bytes (without updating in-memory state yet)
-	entry, curHash, err := s.makeEntryWith(seq, prev, req)
-	if err != nil {
-		s.mu.Unlock()
-		log.Printf("makeEntryWith failed: %v", err)
-		return nil, status.Errorf(codes.Internal, "failed to make entry: %v", err)
-	}
-
 	// append to backend while holding lock to ensure order
 	if s.cfg.Backend == "file" {
-		if err := s.appendToFile(entry); err != nil {
+		curHash, _, err := merklelog.AppendToFile(s.f, seq, prev, map[string]interface{}{"application": req.Application, "level": req.Level, "message": req.Message, "fields": req.Fields}, s.hmacKey)
+		if err != nil {
 			log.Printf("appendToFile failed: %v", err)
 			s.mu.Unlock()
 			return &proto.LogResponse{Ok: false, Error: err.Error()}, nil
 		}
+		// update in-memory chain state only after successful append
+		s.seq = seq
+		s.prevHash = curHash
+		s.mu.Unlock()
 	} else {
 		// syslog path: for demo we just write to stdout with prefix SYSLOG
+		entry, curHash, err := merklelog.MakeEntry(seq, prev, map[string]interface{}{"application": req.Application, "level": req.Level, "message": req.Message, "fields": req.Fields}, s.hmacKey)
+		if err != nil {
+			s.mu.Unlock()
+			log.Printf("makeEntry failed for syslog: %v", err)
+			return nil, status.Errorf(codes.Internal, "failed to make entry: %v", err)
+		}
 		fmt.Printf("SYSLOG: %s\n", string(entry))
+		s.seq = seq
+		s.prevHash = curHash
+		s.mu.Unlock()
 	}
-
-	// update in-memory chain state only after successful append
-	s.seq = seq
-	s.prevHash = curHash
-	s.mu.Unlock()
 
 	log.Printf("Wrote sequence=%d", seq)
 	return &proto.LogResponse{Ok: true}, nil
@@ -184,70 +183,16 @@ func (s *Service) Verify(ctx context.Context, req *proto.VerifyRequest) (*proto.
 }
 
 // makeEntryWith builds the structured log entry with chaining for given sequence and previous hash
-func (s *Service) makeEntryWith(seq int64, prev []byte, req *proto.LogRequest) ([]byte, []byte, error) {
-	// build payload
+// This now delegates the actual entry construction to the shared merklelog package.
+func (s *Service) makeEntryWith(seq uint64, prev []byte, req *proto.LogRequest) ([]byte, []byte, error) {
 	payload := map[string]interface{}{
 		"application": req.Application,
 		"level":       req.Level,
 		"message":     req.Message,
 		"fields":      req.Fields,
 	}
-	payloadB, err := json.Marshal(payload)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	t := time.Now().UTC().Format(time.RFC3339Nano)
-
-	// compute current hash = H(sequence|timestamp|prev|payload)
-	h := sha256.New()
-	h.Write([]byte(fmt.Sprintf("%d|%s|%x|%s", seq, t, prev, payloadB)))
-	curHash := h.Sum(nil)
-
-	// compute signature/HMAC over the entry (excluding signature)
-	mac := hmac.New(sha256.New, s.hmacKey)
-	mac.Write([]byte(fmt.Sprintf("%d|%s|%x|%s|%x", seq, t, prev, payloadB, curHash)))
-	sig := mac.Sum(nil)
-
-	entryObj := map[string]interface{}{
-		"sequence":      seq,
-		"timestamp":     t,
-		"previous_hash": fmt.Sprintf("%x", prev),
-		"payload":       json.RawMessage(payloadB),
-		"current_hash":  fmt.Sprintf("%x", curHash),
-		"signature":     base64.StdEncoding.EncodeToString(sig),
-	}
-
-	entryLine, err := json.Marshal(entryObj)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// prepare newline terminated
-	entryLine = append(entryLine, '\n')
-	return entryLine, curHash, nil
-}
-
-func (s *Service) appendToFile(entry []byte) error {
-	// write and fsync to reduce risk of loss (performance tradeoff)
-	if s.f == nil {
-		return errors.New("file backend not initialized")
-	}
-
-	n, err := s.f.Write(entry)
-	if err != nil {
-		log.Printf("file write error: %v", err)
-		return err
-	}
-	if n != len(entry) {
-		log.Printf("short write: wrote %d expected %d", n, len(entry))
-		return fmt.Errorf("short write")
-	}
-	if err := s.f.Sync(); err != nil {
-		log.Printf("fsync error: %v", err)
-		return err
-	}
-	return nil
+	entryLine, curHash, err := merklelog.MakeEntry(seq, prev, payload, s.hmacKey)
+	return entryLine, curHash, err
 }
 
 // restoreState loads last entry to set s.seq and s.prevHash
@@ -315,7 +260,7 @@ func (s *Service) restoreState() error {
 		return nil
 	}
 	if seqv, ok := entry["sequence"].(float64); ok {
-		s.seq = int64(seqv)
+		s.seq = uint64(seqv)
 	}
 	if ph, ok := entry["current_hash"].(string); ok {
 		b, err := hexDecodeString(ph)
