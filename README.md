@@ -92,7 +92,7 @@ Example:
 
 ```merkle/README.md#L30-33
 # 10 second run, 8 workers, write file to ./bench.log
-./merkle-bench -duration 10 -workers 8 -out ./bench.log
+./bench -duration 10 -workers 8 -out ./bench.log
 ```
 
 Integration tests and preserving logs
