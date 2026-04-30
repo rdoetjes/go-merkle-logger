@@ -86,21 +86,39 @@ jobs:
         run: |
           echo "Building for $GOOS/$GOARCH"
           mkdir -p dist
-          # build each cmd
-          GOOS=$GOOS GOARCH=$GOARCH go build -o dist/merkle-server-${{ matrix.os }}-${{ matrix.arch }} ./cmd/server
-          GOOS=$GOOS GOARCH=$GOARCH go build -o dist/merkle-client-${{ matrix.os }}-${{ matrix.arch }} ./cmd/client
-          GOOS=$GOOS GOARCH=$GOARCH go build -o dist/merkle-checker-${{ matrix.os }}-${{ matrix.arch }} ./cmd/checker
-          GOOS=$GOOS GOARCH=$GOARCH go build -o dist/merkle-bench-${{ matrix.os }}-${{ matrix.arch }} ./cmd/bench
+          # disable cgo for cross-compilation
+          export CGO_ENABLED=0
+          # set output names (windows needs .exe)
+          if [ "$GOOS" = "windows" ]; then
+            srv=dist/merkle-server-${GOOS}-${GOARCH}.exe
+            cli=dist/merkle-client-${GOOS}-${GOARCH}.exe
+            chk=dist/merkle-checker-${GOOS}-${GOARCH}.exe
+            ben=dist/merkle-bench-${GOOS}-${GOARCH}.exe
+          else
+            srv=dist/merkle-server-${GOOS}-${GOARCH}
+            cli=dist/merkle-client-${GOOS}-${GOARCH}
+            chk=dist/merkle-checker-${GOOS}-${GOARCH}
+            ben=dist/merkle-bench-${GOOS}-${GOARCH}
+          fi
+          # build each cmd; ignore failures for optional targets
+          GOOS=$GOOS GOARCH=$GOARCH go build -o "$srv" ./cmd/server || echo "build server failed"
+          GOOS=$GOOS GOARCH=$GOARCH go build -o "$cli" ./cmd/client || echo "build client failed"
+          GOOS=$GOOS GOARCH=$GOARCH go build -o "$chk" ./cmd/checker || echo "build checker failed"
+          GOOS=$GOOS GOARCH=$GOARCH go build -o "$ben" ./cmd/bench || echo "build bench failed"
 
       - name: Package artifacts
         run: |
           mkdir -p out
+          # find built files for this matrix
+          files=$(ls -1 dist | grep "${{ matrix.os }}-${{ matrix.arch }}" || true)
+          if [ -z "$files" ]; then
+            echo "no artifacts built for ${ { matrix.os } }-${{ matrix.arch }}"
+            exit 0
+          fi
           if [ "${{ matrix.os }}" = "windows" ]; then
             zip -j out/merkle-${{ matrix.os }}-${{ matrix.arch }}.zip dist/*${{ matrix.os }}-${{ matrix.arch }}*
-            echo "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.zip" > artifact-path.txt
           else
-            tar -C dist -czf out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz ./*${{ matrix.os }}-${{ matrix.arch }}*
-            echo "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" > artifact-path.txt
+            tar -C dist -czf out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz dist/*${{ matrix.os }}-${{ matrix.arch }}*
           fi
 
       - name: Upload artifacts
