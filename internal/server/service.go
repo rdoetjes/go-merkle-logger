@@ -107,6 +107,7 @@ func rotateExistingLog(path string) error {
 		log.Printf("warning: could not stat log file %s: %v", path, err)
 		return err
 	}
+
 	if fi.IsDir() {
 		return nil
 	}
@@ -116,6 +117,7 @@ func rotateExistingLog(path string) error {
 	if ext == "" {
 		ext = ".log"
 	}
+
 	ts := time.Now().UTC().Format("2006-01-02T15-04-05Z")
 	newName := fmt.Sprintf("%s-%s%s", base, ts, ext)
 	if err := os.Rename(path, newName); err != nil {

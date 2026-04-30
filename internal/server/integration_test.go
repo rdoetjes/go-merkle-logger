@@ -70,7 +70,6 @@ func TestIntegrationRate(t *testing.T) {
 	defer cancel()
 	conn, err := grpc.DialContext(dialCtx, addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(grpc.CallContentSubtype("json")),
 	)
 	if err != nil {
 		t.Fatalf("dial: %v", err)

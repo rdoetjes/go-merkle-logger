@@ -25,7 +25,7 @@ func parseClientFlags() (string, string) {
 func buildDialOptions(cafile string) ([]grpc.DialOption, error) {
 	var opts []grpc.DialOption
 	// Use JSON codec registered in proto package by setting call content subtype
-	opts = append(opts, grpc.WithDefaultCallOptions(grpc.CallContentSubtype("json")))
+	// default protobuf/binary codec is used by the generated protobuf types
 	if cafile != "" {
 		b, err := ioutil.ReadFile(cafile)
 		if err != nil {

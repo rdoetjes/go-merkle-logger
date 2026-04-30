@@ -4,10 +4,23 @@
 
 all: build
 
-build:
+build: proto
+	@echo "building binaries (proto files generated)"
 	go build -o merkle-server ./cmd/server
 	go build -o merkle-client ./cmd/client
 	go build -o merkle-checker ./cmd/checker
+	go build -o merkle-bench ./cmd/bench
+
+proto: install-proto-tools
+	@echo "generating go files from proto/*.proto"
+	protoc --go_out=. --go-grpc_out=. proto/*.proto
+
+install-proto-tools:
+	@echo "Installing protoc-gen-go and protoc-gen-go-grpc into $(go env GOPATH)/bin or $(go env GOBIN)"
+	@echo "This may take a while the first time."
+	@go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+	@echo "installed protoc plugins"
 
 server:
 	go build -o merkle-server ./cmd/server
@@ -36,8 +49,9 @@ run-server:
 run-client:
 	./merkle-client -addr=localhost:8443 -ca cert.pem
 
-test:
-	go test ./...
+test: proto
+	@echo "running tests (no cache)"
+	go test -count=1 ./...
 
 integration:
 	@echo "Running integration rate test (this may take a while). To run shorter use: go test -run TestIntegrationRate -short"

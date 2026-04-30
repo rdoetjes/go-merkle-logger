@@ -14,123 +14,107 @@ Quick build
 
 From the project root (where `go.mod` is located):
 
-```merkle/README.md#L1-6
-# ensure modules are downloaded
-go mod download
-# build server
-go build -o merkle-server ./cmd/server
-# build client example
-go build -o merkle-client ./cmd/client
-# build checker tool
-go build -o merkle-checker ./cmd/checker
-# build bench runner
-go build -o merkle-bench ./cmd/bench
-```
+1. Download dependencies and build
 
-Generating a test TLS certificate (self-signed, with SANs)
+Run:
 
-Modern TLS verification requires Subject Alternative Names (SANs). Create an `openssl.conf` with SANs and generate a cert:
+- Install dependencies
 
-```merkle/README.md#L7-16
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout key.pem -out cert.pem \
-  -config openssl.cnf -extensions v3_req
-```
+  go mod download
 
-Or use `-addext` on newer OpenSSL:
+- Build the binaries
 
-```merkle/README.md#L17-18
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem \
-  -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
-```
+  make build
 
-Running the server
+(You can also run `go build` directly: `go build -o merkle-server ./cmd/server` etc.)
 
-Set an HMAC key (recommended to use a KMS/secret store in production):
+Protocol buffers (proto) usage
 
-```merkle/README.md#L19-21
-export MERKLE_HMAC_KEY="your-hmac-key-here"
-./merkle-server -tls-cert=cert.pem -tls-key=key.pem -addr=:8443 -backend=file -logfile=./protected.log
-```
+This repository uses a protobuf contract at `proto/logging.proto` as the canonical definition for the gRPC API between clients and the server. The generated Go files live under `proto/` and are used by the server and client.
+
+To generate Go code from the .proto files locally, the project provides helper targets in the Makefile.
+
+- Install the code generation tools and generate Go files:
+
+  make proto
+
+This target will:
+- install `protoc-gen-go` and `protoc-gen-go-grpc` via `go install` (developer convenience)
+- run `protoc --go_out=. --go-grpc_out=. proto/*.proto` to produce `proto/*.pb.go` files
+
+Requirements for `make proto`:
+- `protoc` (the Protocol Buffers compiler) must be installed and available on PATH. On macOS you can install with Homebrew:
+
+  brew install protobuf
+
+- `make proto` will install the Go plugins (`protoc-gen-go` and `protoc-gen-go-grpc`) into your `GOBIN` or `GOPATH/bin`.
+
+Why we generate protos
+- Generated code gives you strongly typed message structs and efficient protobuf binary encoding. This is the correct approach for production gRPC services.
+
+TLS certificate
+
+Create a test self-signed certificate with SANs for `localhost`/`127.0.0.1` as described previously (see `openssl.conf` in the repo) or use the `gen_certificate.sh` helper script if present.
+
+Run the server
+
+Set an HMAC key (in production, use a secrets manager/KMS):
+
+  export MERKLE_HMAC_KEY="your-hmac-key-here"
+  ./merkle-server -tls-cert=cert.pem -tls-key=key.pem -addr=:8443 -backend=file -logfile=./protected.log
 
 - Startup rotation: if `./protected.log` exists when the server starts, it will be renamed to `protected-<ISO_TIMESTAMP>.log` and a fresh `protected.log` will be created.
 
-Client example
+Run the client (example)
 
-- To run the example client (verifies the server cert with `cert.pem`):
+- Using CA verification:
 
-```merkle/README.md#L22-24
-./merkle-client -addr=localhost:8443 -ca cert.pem
-```
+  ./merkle-client -addr=localhost:8443 -ca cert.pem
 
-- Quick insecure test (skips TLS verification). Only for local testing:
+- Quick insecure test (local only):
 
-```merkle/README.md#L25-25
-./merkle-client -addr=localhost:8443
-```
+  ./merkle-client -addr=localhost:8443
 
-Checking logs with merkle-checker
+Checker and bench tools
 
-`merkle-checker` accepts either `-file` or a positional filename argument. It verifies hash chaining and HMAC signatures (if you provide the key).
+- `merkle-checker` verifies hash chaining and signatures. Usage:
 
-Examples:
+  ./merkle-checker ./bench.log
+  ./merkle-checker -file=./bench.log -hmac-key="your-hmac-key"
 
-```merkle/README.md#L26-29
-# positional argument
-./merkle-checker ./bench.log
-# or using the flag
-./merkle-checker -file=./bench.log -hmac-key="your-hmac-key"
-```
+- `merkle-bench` is a local throughput runner that starts an in-process server and clients, writes a log file and runs the checker automatically. Example:
 
-The checker returns exit code `0` on success, non-zero on failure.
+  ./merkle-bench -duration 10 -workers 8 -out ./bench.log
 
-Benchmarking / throughput runner
+Testing and integration
 
-`merkle-bench` is a small CLI that starts an in-process server and client workers to measure write throughput and verify output with the checker. It prints a single `RESULT` line with totals and the logfile path.
+- Run unit tests:
 
-Example:
+  make test
 
-```merkle/README.md#L30-33
-# 10 second run, 8 workers, write file to ./bench.log
-./bench -duration 10 -workers 8 -out ./bench.log
-```
+- Integration & bench tests are intentionally disabled by default when running `go test ./...`. To run the integration benchmark test (long running) set:
 
-Integration tests and preserving logs
+  MERKLE_RUN_INTEGRATION=1 go test -v -run TestIntegrationRate ./internal/server
 
-- Unit tests and integration test are available under `internal/`.
-- The integration test (`TestIntegrationRate`) runs for 60s by default. You can run it directly with verbose output to see the logfile path and RESULT:
+- To preserve the integration-generated logfile into the project root during the test run, set:
 
-```merkle/README.md#L34-36
-# run integration test (verbose) and show logfile path
-go test -v -run TestIntegrationRate ./internal/server
-```
+  MERKLE_PRESERVE_LOG=1 MERKLE_RUN_INTEGRATION=1 go test -v -run TestIntegrationRate ./internal/server
 
-- To preserve the generated logfile into the project root for inspection, set `MERKLE_PRESERVE_LOG=1` when running the test:
+CI (GitHub Actions)
 
-```merkle/README.md#L37-38
-MERKLE_PRESERVE_LOG=1 go test -v -run TestIntegrationRate ./internal/server
-# Look for PRESERVED_LOG:<path> in the test output
-```
+A workflow is included at `.github/workflows/ci.yml` that:
+- installs Go
+- downloads modules
+- runs `protoc --go_out` and `protoc --go-grpc_out` to generate proto code
+- runs `go test -v ./...`
+- uploads a coverage artifact
 
-Makefile targets
-
-- `make build` — build server, client, checker
-- `make test` — run `go test ./...`
-- `make integration` — run the integration rate test (verbose)
-- `make bench` — build and run `merkle-bench` (default 30s)
-- `make cert` — helper to generate self-signed cert (uses `openssl.conf` if present)
+A placeholder badge is included in this README — update it after you push the repo to GitHub and replace `OWNER/REPO` with your repository details.
 
 Notes & recommendations
 
 - Production: replace the demo HMAC key with a key from KMS/HSM and consider asymmetric signatures for audit non-repudiation.
 - Performance: the service fsyncs after each write for durability. For higher throughput, consider batching or background flush with configurable durability tradeoffs.
-- Proto code: this demo includes hand-written stub proto types and a JSON codec for simplicity. For production, generate proper Go protobufs with `protoc` + plugins.
-
-
-## CI
-
-This repository includes a GitHub Actions workflow at `.github/workflows/ci.yml` that runs `go test ./...` on push and pull requests to `main` and uploads a coverage artifact.
-
-![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)
+- Proto code: generated protobuf & gRPC Go files are used in this repo (run `make proto` to regenerate). Keep the .proto file as the single source of truth.
 
 License: MIT
