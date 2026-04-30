@@ -49,8 +49,9 @@ run-server:
 run-client:
 	./merkle-client -addr=localhost:8443 -ca cert.pem
 
-test:
-	go test ./...
+test: proto
+	@echo "running tests (no cache)"
+	go test -count=1 ./...
 
 integration:
 	@echo "Running integration rate test (this may take a while). To run shorter use: go test -run TestIntegrationRate -short"
