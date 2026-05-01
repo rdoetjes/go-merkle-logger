@@ -147,7 +147,9 @@ jobs:
           SHA1=$(sha1sum "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" | awk '{print $1}')
 
           echo "MD5 $MD5 SHA1: $SHA1"
+
           echo "Vault: $VAULT_ADDR Token: $VAULT_TOKEN pass: $pass"
+
           pass=$(curl --fail -s -H "X-Vault-Token:  $VAULT_TOKEN" " $VAULT_ADDR/v1/kv/data/prod/artifactory/ci" | jq -r '.data.data.password')
 
           curl --fail -s -u "ci:$pass" \
