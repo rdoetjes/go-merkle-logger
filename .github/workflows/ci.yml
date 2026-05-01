@@ -119,11 +119,22 @@ jobs:
             chk=$DIST/merkle-checker
             ben=$DIST/merkle-bench
           fi
-          # build each cmd; ignore failures for optional targets
-          GOOS=$GOOS GOARCH=$GOARCH go build -o "$srv" ./cmd/server || echo "build server failed"
-          GOOS=$GOOS GOARCH=$GOARCH go build -o "$cli" ./cmd/client || echo "build client failed"
-          GOOS=$GOOS GOARCH=$GOARCH go build -o "$chk" ./cmd/checker || echo "build checker failed"
-          GOOS=$GOOS GOARCH=$GOARCH go build -o "$ben" ./cmd/bench || echo "build bench failed"
+
+          echo "→ Building server..."
+          GOOS=$GOOS GOARCH=$GOARCH go build -o "$srv" ./cmd/server
+
+          echo "→ Building client..."
+          GOOS=$GOOS GOARCH=$GOARCH go build -o "$cli" ./cmd/client
+
+          echo "→ Building checker..."
+          GOOS=$GOOS GOARCH=$GOARCH go build -o "$chk" ./cmd/checker
+
+          echo "→ Building bench..."
+          GOOS=$GOOS GOARCH=$GOARCH go build -o "$ben" ./cmd/bench
+
+          # Optional: list what actually got built
+          echo "Built files:"
+          ls -l "$DIST/" || echo "DIST directory is empty!"
 
       - name: Package artifacts
         run: |
