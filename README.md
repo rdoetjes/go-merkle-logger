@@ -117,4 +117,4 @@ Notes & recommendations
 - Performance: the service fsyncs after each write for durability. For higher throughput, consider batching or background flush with configurable durability tradeoffs.
 - Proto code: generated protobuf & gRPC Go files are used in this repo (run `make proto` to regenerate). Keep the .proto file as the single source of truth.
 
-License: MIT
+License: GPL
