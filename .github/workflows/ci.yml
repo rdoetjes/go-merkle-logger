@@ -144,14 +144,12 @@ jobs:
 
       - name: Store artifacts in Artifactory
         run: |
-          set -euo pipefail
+          #set -euo pipefail
 
           MD5=$(md5sum "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" | awk '{print $1}')
           SHA1=$(sha1sum "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" | awk '{print $1}')
 
-          echo "MD5 $MD5 SHA1: $SHA1 Vault: ${{ vars.VAULT_ADDR }} Token: ${{ secrets.VAULT_TOKEN }}"
-
-          pass=$(curl --fail -s -H "X-Vault-Token:  ${{ secrets.VAULT_TOKEN }} " " ${{ vars.VAULT_ADDR }}/v1/kv/data/prod/artifactory/ci" | jq -r '.data.data.password')
+          pass=$(curl --fail -s -H "X-Vault-Token: ${{ secrets.VAULT_TOKEN }}" "${{ vars.VAULT_ADDR }}/v1/kv/data/prod/artifactory/ci" | jq -r '.data.data.password')
 
           curl --fail -s -u "ci:$pass" \
             -X PUT \
