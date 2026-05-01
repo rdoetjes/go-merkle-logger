@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: ["**"] # All branches (you can also remove this section for all pushes)
   pull_request:
-    branches: [main]
+    branches: [main] # PRs targeting main
 
 jobs:
   test:
