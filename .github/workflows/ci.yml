@@ -152,13 +152,13 @@ jobs:
           echo "checksum for: merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz $MD5 $SHA1"
 
           pass=$(curl --fail -s -H "X-Vault-Token: ${{ secrets.VAULT_TOKEN }}" "${{ vars.VAULT_ADDR }}/v1/kv/data/prod/artifactory/ci" | jq -r '.data.data.password')
-
+          iso=$(date +%Y%m%d%H%M)
           curl --fail-with-body -s -u "ci:$pass" \
             -X PUT \
             -T "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" \
             -H "X-Checksum-Md5: $MD5" \
             -H "X-Checksum-Sha1: $SHA1" \
-            "https://stratos01.phonax.com/artifactory/internal_test/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz"
+            "https://stratos01.phonax.com/artifactory/internal_test/merkel/$iso/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
