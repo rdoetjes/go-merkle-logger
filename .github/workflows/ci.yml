@@ -67,6 +67,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Load .env variables
+        run: |
+          export $(cat ~/actions-runner/.env | xargs)
+          env
+
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
