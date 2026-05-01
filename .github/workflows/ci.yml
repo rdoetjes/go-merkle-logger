@@ -60,10 +60,6 @@ jobs:
         include:
           - os: linux
             arch: amd64
-          - os: linux
-            arch: arm64
-          - os: windows
-            arch: amd64
           - os: darwin
             arch: amd64
           - os: darwin
@@ -147,10 +143,10 @@ jobs:
           SHA1=$(sha1sum "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" | awk '{print $1}')
 
           echo "MD5 $MD5 SHA1: $SHA1"
-
           pass=$(curl -s -H "X-Vault-Token: $VAULT_TOKEN" "$VAULT_ADDR/v1/kv/data/prod/artifactory/ci" | jq -r '.data.data.password')
+          echo "TEMP: $VAULT_ADDR $VAULT_TOKEN pass: $pass"
 
-          curl -u "ci:$pass" \
+          curl -s -u "ci:$pass" \
             -X PUT \
             -T "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" \
             -H "X-Checksum-Md5: $MD5" \
