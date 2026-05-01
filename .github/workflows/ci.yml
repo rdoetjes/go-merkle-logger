@@ -143,8 +143,8 @@ jobs:
 
       - name: Store artifacts in Artifactory
         run: |
-          MD5=$(md5sum "$1" | awk '{print $1}')
-          SHA1=$(sha1sum "$1" | awk '{print $1}')
+          MD5=$(md5sum "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" | awk '{print $1}')
+          SHA1=$(sha1sum "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" | awk '{print $1}')
           pass=$(vault kv get -field=password kv/prod/artifactory/ci)
           echo "Password is $pass"
 
