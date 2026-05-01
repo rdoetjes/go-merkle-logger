@@ -138,11 +138,26 @@ jobs:
 
       - name: Package artifacts
         run: |
-          echo "dit is $DIST/ dir"
           mkdir -p out
-          tarfile=out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
-          tar -czf "$tarfile" -C $DIST/
-          echo "packaged $tarfile"
+          # Re-define DIST here so it's reliable
+          DIST="dist/${{ matrix.os }}/${{ matrix.arch }}"
+          tarfile="out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz"
+
+          echo "=== Packaging ==="
+          echo "DIST directory = $DIST"
+          echo "Contents:"
+          ls -la "$DIST" || echo "Directory $DIST does NOT exist!"
+
+          if [ ! -d "$DIST" ] || [ -z "$(ls -A "$DIST")" ]; then
+            echo "ERROR: DIST directory is missing or empty!"
+            exit 1
+          fi
+
+          echo "Creating archive: $tarfile"
+          tar -czf "$tarfile" -C "$DIST" .
+
+          echo "✅ Successfully created $(du -h "$tarfile" | cut -f1) archive"
+          ls -lh "$tarfile"
 
       - name: Store artifacts in Artifactory
         run: |
