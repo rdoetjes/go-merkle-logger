@@ -71,10 +71,6 @@ jobs:
             arch: amd64
           - os: darwin
             arch: arm64
-    env:
-      GOOS: ${{ matrix.os }}
-      GOARCH: ${{ matrix.arch }}
-      DIST: dist/${{ matrix.os }}/${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v4
 
@@ -103,6 +99,10 @@ jobs:
 
       - name: Build binaries
         run: |
+          GOOS=${{ matrix.os }}
+          GOARCH=${{ matrix.arch }}
+          DIST=dist/${{ matrix.os }}/${{ matrix.arch }}
+
           echo "Building for $GOOS/$GOARCH to be stored in $DIST/"
           mkdir -p $DIST
           # disable cgo for cross-compilation
