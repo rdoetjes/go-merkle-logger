@@ -71,6 +71,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Test
+        run: |
+          echo "== identity =="
+          whoami
+          hostname
+          pwd
+
+          echo "== root inode =="
+          ls -di /
+
+          echo "== usr inode =="
+          ls -di /usr /usr/bin || true
+
+          echo "== vault path =="
+          ls -l /usr/bin/vault || echo "vault missing"
+
+          echo "== full filesystem snapshot =="
+          ls / | sort
+
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
