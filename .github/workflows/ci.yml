@@ -145,7 +145,7 @@ jobs:
         run: |
           MD5=$(md5sum "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" | awk '{print $1}')
           SHA1=$(sha1sum "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" | awk '{print $1}')
-          pass=$("$GITHUB_WORKSPACE/vault" kv get -field=password kv/prod/artifactory/ci)
+          pass=$("$RUNNER_WORKSPACE/vault" kv get -field=password kv/prod/artifactory/ci)
           echo "Password is $pass"
 
           curl -u "ci:$pass" \
