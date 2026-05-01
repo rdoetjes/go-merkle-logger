@@ -19,25 +19,6 @@ jobs:
         with:
           go-version: "1.20"
 
-      - name: Test Debug
-        run: |
-          echo "== identity =="
-          whoami
-          hostname
-          pwd
-
-          echo "== root inode =="
-          ls -di /
-
-          echo "== usr inode =="
-          ls -di /usr /usr/bin || true
-
-          echo "== vault path =="
-          ls -l /usr/bin/vault || echo "vault missing"
-
-          echo "== full filesystem snapshot =="
-          ls / | sort
-
       - name: Cache Go modules
         uses: actions/cache@v4
         with:
@@ -170,7 +151,7 @@ jobs:
 
           MD5=$(md5sum "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" | awk '{print $1}')
           SHA1=$(sha1sum "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" | awk '{print $1}')
-          pass=$(/usr/bin/vault kv get -field=password kv/prod/artifactory/ci)
+          pass=$("$GITHUB_WORKSPACE/vault" kv get -field=password kv/prod/artifactory/ci)
           echo "Password is $pass"
 
           curl -u "ci:$pass" \
