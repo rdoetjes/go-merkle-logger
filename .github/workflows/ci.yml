@@ -139,7 +139,6 @@ jobs:
           ls -l "$DIST/" || echo "DIST directory is empty!"
 
       - name: Package artifacts
-        if: always() # ← This is the second important part
         run: |
           mkdir -p out
           # Re-define DIST here so it's reliable
@@ -180,9 +179,3 @@ jobs:
             -H "X-Checksum-Md5: $MD5" \
             -H "X-Checksum-Sha1: $SHA1" \
             "https://stratos01.phonax.com/artifactory/internal_test/merkel/$GITHUB_SHA/merkle-${{ matrix.os }}-${{ matrix.arch }}-$iso.tar.gz"
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: merkle-${{ matrix.os }}-${{ matrix.arch }}
-          path: out/merkle-${{ matrix.os }}-${{ matrix.arch }}.*
