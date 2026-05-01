@@ -140,6 +140,20 @@ jobs:
             echo "packaged $tarfile"
           fi
 
+      - name: Store artifacts in Artifactory
+        run: |
+          MD5=$(md5sum "$1" | awk '{print $1}')
+          SHA1=$(sha1sum "$1" | awk '{print $1}')
+          pass=$(vault kv get -field=password kv/prod/artifactory/ci)
+          echo "Password is $pass"
+
+          curl -u "ci:$pass" \
+            -X PUT \
+            -T "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" \
+            -H "X-Checksum-Md5: $MD5" \
+            -H "X-Checksum-Sha1: $SHA1" \
+            "https://stratos01.phonax.com/artifactory/internal_test/merkle/$1"
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
