@@ -63,6 +63,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: linux
@@ -71,6 +72,7 @@ jobs:
             arch: amd64
           - os: darwin
             arch: arm64
+    continue-on-error: false
     steps:
       - uses: actions/checkout@v4
 
@@ -137,6 +139,7 @@ jobs:
           ls -l "$DIST/" || echo "DIST directory is empty!"
 
       - name: Package artifacts
+        if: always() # ← This is the second important part
         run: |
           mkdir -p out
           # Re-define DIST here so it's reliable
