@@ -140,10 +140,8 @@ jobs:
       - name: Store artifacts in Artifactory
         run: |
           set -eo
-          set -a
-          /home/ci/actions-runner/.env
-          set +a
 
+          env
 
           MD5=$(md5sum "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" | awk '{print $1}')
           SHA1=$(sha1sum "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" | awk '{print $1}')
