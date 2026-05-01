@@ -138,6 +138,7 @@ jobs:
 
       - name: Package artifacts
         run: |
+          echo "dit is $DIDT/ dir"
           mkdir -p out
           tarfile=out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
           tar -czf "$tarfile" -C $DIST/
