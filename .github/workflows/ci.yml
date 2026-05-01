@@ -103,20 +103,20 @@ jobs:
           GOARCH: ${{ matrix.arch }}
         run: |
           echo "Building for $GOOS/$GOARCH"
-          mkdir -p dist
+          mkdir -p dist/${GOOS}/${GOARCH}
           # disable cgo for cross-compilation
           export CGO_ENABLED=0
           # set output names (windows needs .exe)
           if [ "$GOOS" = "windows" ]; then
-            srv=dist/merkle-server-${GOOS}-${GOARCH}.exe
-            cli=dist/merkle-client-${GOOS}-${GOARCH}.exe
-            chk=dist/merkle-checker-${GOOS}-${GOARCH}.exe
-            ben=dist/merkle-bench-${GOOS}-${GOARCH}.exe
+            srv=dist/${GOOS}/${GOARCH}/merkle-server.exe
+            cli=dist/${GOOS}/${GOARCH}/merkle-client.exe
+            chk=dist/${GOOS}/${GOARCH}/merkle-checker.exe
+            ben=dist/${GOOS}/${GOARCH}/merkle-bench.exe
           else
-            srv=dist/merkle-server-${GOOS}-${GOARCH}
-            cli=dist/merkle-client-${GOOS}-${GOARCH}
-            chk=dist/merkle-checker-${GOOS}-${GOARCH}
-            ben=dist/merkle-bench-${GOOS}-${GOARCH}
+            srv=dist/${GOOS}/${GOARCH}/merkle-server
+            cli=dist/${GOOS}/${GOARCH}/merkle-client
+            chk=dist/${GOOS}/${GOARCH}/merkle-checker
+            ben=dist/${GOOS}/${GOARCH}/merkle-bench
           fi
           # build each cmd; ignore failures for optional targets
           GOOS=$GOOS GOARCH=$GOARCH go build -o "$srv" ./cmd/server || echo "build server failed"
@@ -127,27 +127,9 @@ jobs:
       - name: Package artifacts
         run: |
           mkdir -p out
-          # collect matching files
-          matches=()
-          for f in dist/*${{ matrix.os }}-${{ matrix.arch }}*; do
-            if [ -e "$f" ]; then
-              matches+=("$f")
-            fi
-          done
-          if [ ${#matches[@]} -eq 0 ]; then
-            echo "no artifacts built for ${{ matrix.os }}-${{ matrix.arch }}"
-            exit 0
-          fi
-          echo "found files: ${matches[*]}"
-          if [ "${{ matrix.os }}" = "windows" ]; then
-            zipfile=out/merkle-${{ matrix.os }}-${{ matrix.arch }}.zip
-            zip -j "$zipfile" "${matches[@]}"
-            echo "packaged $zipfile"
-          else
-            tarfile=out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
-            tar -czf "$tarfile" -C dist "${matches[@]##dist/}"
-            echo "packaged $tarfile"
-          fi
+          tarfile=out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
+          tar -czf "$tarfile" -C dist/${GOOS}/${GOARCH}
+          echo "packaged $tarfile"
 
       - name: Store artifacts in Artifactory
         run: |
