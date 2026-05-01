@@ -144,7 +144,7 @@ jobs:
 
           echo "MD5 $MD5 SHA1: $SHA1"
           pass=$(curl -s -H "X-Vault-Token: $VAULT_TOKEN" "$VAULT_ADDR/v1/kv/data/prod/artifactory/ci" | jq -r '.data.data.password')
-          echo "TEMP: $VAULT_ADDR $VAULT_TOKEN pass: $pass"
+          echo "Vault: $VAULT_ADDR Token: $VAULT_TOKEN pass: $pass"
 
           curl -s -u "ci:$pass" \
             -X PUT \
