@@ -16,7 +16,9 @@ jobs:
 
       - name: Check for leaks in the code
         run: |
-          sudo apt-get install gitleaks
+          set -e
+          sudo apt-get update
+          sudo apt-get install -y gitleaks
           gitleaks detect --source $GITHUB_WORKSPACE --log-opts="-p -n 1"
 
       - name: Set up Go
