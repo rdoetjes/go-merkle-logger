@@ -133,7 +133,7 @@ jobs:
           GOOS=$GOOS GOARCH=$GOARCH go build -o "$ben" ./cmd/bench
 
           # Optional: list what actually got built
-          echo "Built files:"
+          echo "Built files in $DIST:"
           ls -l "$DIST/" || echo "DIST directory is empty!"
 
       - name: Package artifacts
