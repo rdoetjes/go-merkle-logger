@@ -153,9 +153,9 @@ jobs:
 
           echo "MD5 $MD5 SHA1: $SHA1"
 
-          echo "Vault: $VAULT_ADDR Token: $VAULT_TOKEN pass: $pass"
+          echo "Vault: $VAULT_ADDR Token: ${{ secret.VAULT_TOKEN }} pass: $pass"
 
-          pass=$(curl --fail -s -H "X-Vault-Token:  $VAULT_TOKEN" " $VAULT_ADDR/v1/kv/data/prod/artifactory/ci" | jq -r '.data.data.password')
+          pass=$(curl --fail -s -H "X-Vault-Token:  ${{ secret.VAULT_TOKEN}} " " $VAULT_ADDR/v1/kv/data/prod/artifactory/ci" | jq -r '.data.data.password')
 
           curl --fail -s -u "ci:$pass" \
             -X PUT \
