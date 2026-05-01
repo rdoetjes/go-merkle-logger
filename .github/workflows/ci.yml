@@ -143,12 +143,6 @@ jobs:
 
       - name: Store artifacts in Artifactory
         run: |
-          echo "== vault file =="
-          ls -l /usr/bin/vault
-
-          echo "== binary info =="
-          file /usr/bin/vault
-
           MD5=$(md5sum "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" | awk '{print $1}')
           SHA1=$(sha1sum "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" | awk '{print $1}')
           pass=$("$GITHUB_WORKSPACE/vault" kv get -field=password kv/prod/artifactory/ci)
