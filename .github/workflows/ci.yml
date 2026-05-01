@@ -71,6 +71,10 @@ jobs:
             arch: amd64
           - os: darwin
             arch: arm64
+    env:
+      GOOS: ${{ matrix.os }}
+      GOARCH: ${{ matrix.arch }}
+      DIST: dist/${{ matrix.os }}/${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v4
 
@@ -98,10 +102,6 @@ jobs:
         run: make proto
 
       - name: Build binaries
-        env:
-          GOOS: ${{ matrix.os }}
-          GOARCH: ${{ matrix.arch }}
-          DIST: dist/${{ matrix.os }}/${{ matrix.arch }}
         run: |
           echo "Building for $GOOS/$GOARCH to be stored in $DIST/"
           mkdir -p $DIST
@@ -138,7 +138,7 @@ jobs:
 
       - name: Package artifacts
         run: |
-          echo "dit is $DIDT/ dir"
+          echo "dit is $DIST/ dir"
           mkdir -p out
           tarfile=out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
           tar -czf "$tarfile" -C $DIST/
