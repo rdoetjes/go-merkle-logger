@@ -151,7 +151,7 @@ jobs:
 
           pass=$(curl --fail -s -H "X-Vault-Token: ${{ secrets.VAULT_TOKEN }}" "${{ vars.VAULT_ADDR }}/v1/kv/data/prod/artifactory/ci" | jq -r '.data.data.password')
 
-          curl --fail -u "ci:$pass" \
+          curl --fail-with-body -u "ci:$pass" \
             -X PUT \
             -T "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" \
             -H "X-Checksum-Md5: $MD5" \
