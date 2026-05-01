@@ -101,22 +101,23 @@ jobs:
         env:
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
+          DIST: dist/${{ matrix.os }}/${{ matrix.arch }}
         run: |
-          echo "Building for $GOOS/$GOARCH"
-          mkdir -p dist/${GOOS}/${GOARCH}
+          echo "Building for $GOOS/$GOARCH to be stored in $DIST/"
+          mkdir -p $DIST
           # disable cgo for cross-compilation
           export CGO_ENABLED=0
           # set output names (windows needs .exe)
           if [ "$GOOS" = "windows" ]; then
-            srv=dist/${GOOS}/${GOARCH}/merkle-server.exe
-            cli=dist/${GOOS}/${GOARCH}/merkle-client.exe
-            chk=dist/${GOOS}/${GOARCH}/merkle-checker.exe
-            ben=dist/${GOOS}/${GOARCH}/merkle-bench.exe
+            srv=$DIST/merkle-server.exe
+            cli=$DIST/merkle-client.exe
+            chk=$DIST/merkle-checker.exe
+            ben=$DIST/merkle-bench.exe
           else
-            srv=dist/${GOOS}/${GOARCH}/merkle-server
-            cli=dist/${GOOS}/${GOARCH}/merkle-client
-            chk=dist/${GOOS}/${GOARCH}/merkle-checker
-            ben=dist/${GOOS}/${GOARCH}/merkle-bench
+            srv=$DIST/merkle-server
+            cli=$DIST/merkle-client
+            chk=$DIST/merkle-checker
+            ben=$DIST/merkle-bench
           fi
           # build each cmd; ignore failures for optional targets
           GOOS=$GOOS GOARCH=$GOARCH go build -o "$srv" ./cmd/server || echo "build server failed"
@@ -128,7 +129,7 @@ jobs:
         run: |
           mkdir -p out
           tarfile=out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
-          tar -czf "$tarfile" -C dist/${GOOS}/${GOARCH}
+          tar -czf "$tarfile" -C $DIST/
           echo "packaged $tarfile"
 
       - name: Store artifacts in Artifactory
