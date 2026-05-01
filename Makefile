@@ -26,7 +26,7 @@ install-proto-tools:
 	# Use pinned versions compatible with Go 1.20 runners
 	@go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.1
 	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
-	@echo "installed protoc plugins"
+	@echo "installed protoc plugins."
 
 server:
 	go build -o merkle-server ./cmd/server
