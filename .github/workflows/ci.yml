@@ -139,7 +139,7 @@ jobs:
 
       - name: Store artifacts in Artifactory
         run: |
-          set -o e
+          set -eo
           set -a
           /home/ci/actions-runner/.env
           set +a
