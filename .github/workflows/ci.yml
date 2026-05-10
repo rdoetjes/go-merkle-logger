@@ -162,6 +162,7 @@ jobs:
           ls -lh "$tarfile"
 
       - name: Store artifacts in Artifactory
+        if: github.ref == 'refs/heads/main'
         run: |
           set -euo pipefail
 
