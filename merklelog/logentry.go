@@ -69,7 +69,7 @@ func ParseAndVerifyEntry(line []byte) (Entry, []byte, error) {
 	}
 	// recompute hash
 	h := sha256.New()
-	h.Write([]byte(fmt.Sprintf("%d|%s|%s|%s", e.Sequence, e.Timestamp, e.PreviousHash, string(e.Payload))))
+	h.Write([]byte(fmt.Sprintf("%d|%s|%s|%s", e.Sequence+1, e.Timestamp, e.PreviousHash, string(e.Payload))))
 	calc := h.Sum(nil)
 	return e, calc, nil
 }
