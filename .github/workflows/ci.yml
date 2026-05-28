@@ -21,10 +21,19 @@ jobs:
           sudo apt-get install -y gitleaks
           gitleaks detect --source $GITHUB_WORKSPACE --log-opts="-p -n 1"
 
+      - name: check supply chain attacks
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sudo sh -s -- -b /usr/local/bin
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sudo sh -s -- -b /usr/local/bin
+          echo "Creating SBOM..."
+          syft scan . --output cyclonedx-json@1.5=sbom.cdx.json
+          echo "Running vulnerability scan..."
+          grype sbom.cdx.json
+
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.20"
+          go-version: "1.26.3"
 
       - name: Cache Go modules
         uses: actions/cache@v4
@@ -82,7 +91,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.20"
+          go-version: "1.26.3"
 
       - name: Install protoc
         run: |
@@ -142,6 +151,7 @@ jobs:
           # Re-define DIST here so it's reliable
           DIST="dist/${{ matrix.os }}/${{ matrix.arch }}"
           tarfile="out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz"
+          tar_sbom="out/merkle-sbom-${{ matrix.os }}-${{ matrix.arch }}.tar.gz"
 
           echo "=== Packaging ==="
           echo "DIST directory = $DIST"
@@ -153,28 +163,37 @@ jobs:
             exit 1
           fi
 
-          echo "Creating archive: $tarfile"
+          echo "Creating binary archive: $tarfile"
           tar -czf "$tarfile" -C "$DIST" .
 
-          echo "✅ Successfully created $(du -h "$tarfile" | cut -f1) archive"
-          ls -lh "$tarfile"
+          echo "Creating SBOM archive: $tar_sbom"
+          tar -czf "$tar_sbom" sbom.cdx.json
+
+          echo "✅ Successfully created archives:"
+          ls -lh "$tarfile" "$tar_sbom"
 
       - name: Store artifacts in Artifactory
         if: github.ref == 'refs/heads/main'
         run: |
           set -euo pipefail
 
-          MD5=$(md5sum "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" | awk '{print $1}')
-          SHA1=$(sha1sum "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" | awk '{print $1}')
-
-          echo "checksum for: merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz $MD5 $SHA1"
-
           pass=$(curl --fail -s -H "X-Vault-Token: ${{ secrets.VAULT_TOKEN }}" "${{ vars.VAULT_ADDR }}/v1/kv/data/prod/artifactory/ci" | jq -r '.data.data.password')
           iso=$(date +%Y%m%d%H%M)
 
-          curl --fail-with-body -s -u "ci:$pass" \
-            -X PUT \
-            -T "out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" \
-            -H "X-Checksum-Md5: $MD5" \
-            -H "X-Checksum-Sha1: $SHA1" \
+          # Upload Binary Tarball
+          FILE="out/merkle-${{ matrix.os }}-${{ matrix.arch }}.tar.gz"
+          MD5=$(md5sum "$FILE" | awk '{print $1}')
+          SHA1=$(sha1sum "$FILE" | awk '{print $1}')
+          echo "Uploading $FILE (MD5: $MD5, SHA1: $SHA1)"
+          curl --fail-with-body -s -u "ci:$pass" -X PUT -T "$FILE" \
+            -H "X-Checksum-Md5: $MD5" -H "X-Checksum-Sha1: $SHA1" \
             "https://stratos01.phonax.com/artifactory/internal_test/merkel/$GITHUB_SHA/merkle-${{ matrix.os }}-${{ matrix.arch }}-$iso.tar.gz"
+
+          # Upload SBOM Tarball
+          SBOM="out/merkle-sbom-${{ matrix.os }}-${{ matrix.arch }}.tar.gz"
+          MD5_S=$(md5sum "$SBOM" | awk '{print $1}')
+          SHA1_S=$(sha1sum "$SBOM" | awk '{print $1}')
+          echo "Uploading $SBOM (MD5: $MD5_S, SHA1: $SHA1_S)"
+          curl --fail-with-body -s -u "ci:$pass" -X PUT -T "$SBOM" \
+            -H "X-Checksum-Md5: $MD5_S" -H "X-Checksum-Sha1: $SHA1_S" \
+            "https://stratos01.phonax.com/artifactory/internal_test/merkel/$GITHUB_SHA/merkle-sbom-${{ matrix.os }}-${{ matrix.arch }}-$iso.tar.gz"

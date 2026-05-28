@@ -1,6 +1,6 @@
 # Makefile for merkle logging service
 
-.PHONY: all build server client checker cert run-server run-client clean
+.PHONY: all build server client checker cert run-server run-client update-sbom clean
 
 all: build
 
@@ -68,5 +68,15 @@ bench:
 	go build -o merkle-bench ./cmd/bench
 	./merkle-bench -duration 30
 
+update-sbom:
+	@echo "Updating dependencies and generating SBOM..."
+	go mod tidy
+	go get -u ./...
+	go mod tidy
+	@# Scan current directory and output to file explicitly
+	syft scan . --output cyclonedx-json@1.5=sbom.cdx.json
+	@echo "Running vulnerability scan..."
+	grype sbom.cdx.json
+
 clean:
-	rm -f merkle-server merkle-client merkle-checker
+	rm -f merkle-server merkle-client merkle-checker merkle-bench
