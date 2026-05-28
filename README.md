@@ -18,15 +18,25 @@ From the project root (where `go.mod` is located):
 
 Run:
 
-- Install dependencies
+```bash
+make build
+```
 
-  go mod download
+### Makefile Targets
 
-- Build the binaries
+The project includes a comprehensive `Makefile` to automate common tasks:
 
-  make build
-
-(You can also run `go build` directly: `go build -o merkle-server ./cmd/server` etc.)
+| Target | Description |
+| :--- | :--- |
+| `make build` | Builds all binaries (`merkle-server`, `merkle-client`, `merkle-checker`, `merkle-bench`). |
+| `make proto` | Generates Go code from `.proto` files (installs tools if missing). |
+| `make test` | Runs all unit tests. |
+| `make update-sbom` | **Security**: Updates Go dependencies, generates a CycloneDX SBOM, and runs a `grype` vulnerability scan. |
+| `make cert` | Generates self-signed TLS certificates (`cert.pem`, `key.pem`) for local development. |
+| `make run-server` | Starts the server with default development flags (requires certificates). |
+| `make run-client` | Starts a sample client to send log entries to the server. |
+| `make bench` | Builds and runs the throughput benchmark tool. |
+| `make clean` | Removes all compiled binaries. |
 
 Protocol buffers (proto) usage
 
@@ -100,14 +110,20 @@ Testing and integration
 
   MERKLE_PRESERVE_LOG=1 MERKLE_RUN_INTEGRATION=1 go test -v -run TestIntegrationRate ./internal/server
 
-CI (GitHub Actions)
+CI (GitHub Actions) & Security
 
-A workflow is included at `.github/workflows/ci.yml` that:
-- installs Go
-- downloads modules
-- runs `protoc --go_out` and `protoc --go-grpc_out` to generate proto code
-- runs `go test -v ./...`
-- uploads a coverage artifact
+A workflow is included at `.github/workflows/ci.yml` that automates the entire pipeline:
+- **Linting & Secrets**: Runs `gitleaks` to detect hardcoded secrets.
+- **Supply Chain Security**:
+  - Installs `syft` and `grype`.
+  - Generates a CycloneDX SBOM.
+  - Scans for vulnerabilities (fails on High/Critical).
+  - Packages and uploads the SBOM to Artifactory.
+- **Build & Test**:
+  - Installs Go 1.26.3 (secured against stdlib CVEs).
+  - Generates proto code and runs tests.
+  - Cross-compiles binaries for Linux (amd64) and Darwin (arm64).
+  - Packages artifacts as `.tar.gz` and uploads to Artifactory.
 
 A placeholder badge is included in this README — update it after you push the repo to GitHub and replace `OWNER/REPO` with your repository details.
 
