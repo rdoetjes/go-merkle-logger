@@ -1,0 +1,22 @@
+name: Nightly Security Scan
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: check supply chain attacks
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sudo sh -s -- -b /usr/local/bin
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sudo sh -s -- -b /usr/local/bin
+          echo "Creating SBOM..."
+          syft scan . --source-name "go-merkle-logger" --source-version $GITHUB_SHA --output cyclonedx-json@1.5=sbom.cdx.json
+          echo "Running vulnerability scan..."
+          grype sbom.cdx.json
