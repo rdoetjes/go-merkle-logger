@@ -1,10 +1,13 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"flag"
 	"fmt"
 	"log"
 	"net"
+	"os"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -16,6 +19,7 @@ type cliConfig struct {
 	addr    string
 	tlsCert string
 	tlsKey  string
+	caCert  string
 	backend string
 	logfile string
 }
@@ -24,14 +28,43 @@ func parseFlags() cliConfig {
 	addr := flag.String("addr", ":8443", "gRPC listen address")
 	tlsCert := flag.String("tls-cert", "", "TLS cert file (required)")
 	tlsKey := flag.String("tls-key", "", "TLS key file (required)")
+	caCert := flag.String("ca", "", "CA cert file for client authentication (optional, enables mTLS)")
 	backend := flag.String("backend", "file", "output backend: file or syslog")
 	logfile := flag.String("logfile", "./protected.log", "path to log file when backend=file")
 	flag.Parse()
-	return cliConfig{addr: *addr, tlsCert: *tlsCert, tlsKey: *tlsKey, backend: *backend, logfile: *logfile}
+	return cliConfig{addr: *addr, tlsCert: *tlsCert, tlsKey: *tlsKey, caCert: *caCert, backend: *backend, logfile: *logfile}
 }
 
-func loadTLSCredentials(certFile, keyFile string) (credentials.TransportCredentials, error) {
-	return credentials.NewServerTLSFromFile(certFile, keyFile)
+func loadTLSCredentials(cfg cliConfig) (credentials.TransportCredentials, error) {
+	if cfg.caCert == "" {
+		return credentials.NewServerTLSFromFile(cfg.tlsCert, cfg.tlsKey)
+	}
+
+	// Load server certificate and key
+	serverCert, err := tls.LoadX509KeyPair(cfg.tlsCert, cfg.tlsKey)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load CA certificate
+	caPem, err := os.ReadFile(cfg.caCert)
+	if err != nil {
+		return nil, err
+	}
+
+	certPool := x509.NewCertPool()
+	if !certPool.AppendCertsFromPEM(caPem) {
+		return nil, fmt.Errorf("failed to add CA certificate to pool")
+	}
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{serverCert},
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    certPool,
+		MinVersion:   tls.VersionTLS12,
+	}
+
+	return credentials.NewTLS(tlsConfig), nil
 }
 
 func createListener(addr string) (net.Listener, error) {
@@ -61,7 +94,7 @@ func main() {
 		log.Fatal("tls-cert and tls-key are required")
 	}
 
-	creds, err := loadTLSCredentials(cfg.tlsCert, cfg.tlsKey)
+	creds, err := loadTLSCredentials(cfg)
 	if err != nil {
 		log.Fatalf("failed to load TLS credentials: %v", err)
 	}

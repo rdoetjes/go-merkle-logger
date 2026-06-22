@@ -38,22 +38,27 @@ checker:
 	go build -o merkle-checker ./cmd/checker
 
 cert:
-	@echo "Generating self-signed certificate (with SANs) as cert.pem/key.pem"
-	@if [ -f openssl.conf ]; then \
-		openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-		  -keyout key.pem -out cert.pem \
-		  -config openssl.conf -extensions v3_req; \
-	else \
-		openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem \
-		  -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"; \
-	fi
+	@echo "Generating CA, Server, and Client certificates..."
+	# Generate CA
+	openssl genrsa -out ca-key.pem 2048
+	openssl req -new -x509 -days 365 -key ca-key.pem -out ca.pem -subj "/CN=Merkle CA"
+
+	# Generate Server Cert
+	openssl genrsa -out server-key.pem 2048
+	openssl req -new -key server-key.pem -out server.csr -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+	openssl x509 -req -days 365 -in server.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out server-cert.pem -copy_extensions copyall
+
+	# Generate Client Cert
+	openssl genrsa -out client-key.pem 2048
+	openssl req -new -key client-key.pem -out client.csr -subj "/CN=merkle-client"
+	openssl x509 -req -days 365 -in client.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out client-cert.pem
 
 run-server:
-	@echo "Starting server (requires cert.pem and key.pem). Use MERKLE_HMAC_KEY env var to set HMAC key."
-	export MERKLE_HMAC_KEY=${MERKLE_HMAC_KEY:-demo-key}; ./merkle-server -tls-cert=cert.pem -tls-key=key.pem -addr=:8443 -backend=file -logfile=./protected.log
+	@echo "Starting server with mTLS. Use MERKLE_HMAC_KEY env var to set HMAC key."
+	export MERKLE_HMAC_KEY=$${MERKLE_HMAC_KEY:-demo-key}; ./merkle-server -tls-cert=server-cert.pem -tls-key=server-key.pem -ca=ca.pem -addr=:8443 -backend=file -logfile=./protected.log
 
 run-client:
-	./merkle-client -addr=localhost:8443 -ca cert.pem
+	./merkle-client -addr=localhost:8443 -ca ca.pem -tls-cert=client-cert.pem -tls-key=client-key.pem
 
 test: proto
 	@echo "running tests (no cache)"
@@ -80,3 +85,4 @@ update-sbom:
 
 clean:
 	rm -f merkle-server merkle-client merkle-checker merkle-bench
+	rm -f *.pem *.csr *.srl
