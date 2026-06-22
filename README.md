@@ -81,9 +81,6 @@ Run the client (example)
 
   ./merkle-client -addr=localhost:8443 -ca ca.pem -tls-cert client-cert.pem -tls-key client-key.pem
 
-- Quick insecure test (local only, skips client cert):
-
-  ./merkle-client -addr=localhost:8443
 
 Checker and bench tools
 
