@@ -14,7 +14,7 @@ Quick build
 
 From the project root (where `go.mod` is located):
 
-1. Download dependencies and build
+1. Download dependencies and build.
 
 Run:
 
