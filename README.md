@@ -71,17 +71,17 @@ Run the server
 Set an HMAC key (in production, use a secrets manager/KMS):
 
   export MERKLE_HMAC_KEY="your-hmac-key-here"
-  ./merkle-server -tls-cert=cert.pem -tls-key=key.pem -addr=:8443 -backend=file -logfile=./protected.log
+  ./merkle-server -tls-cert=server-cert.pem -tls-key=server-key.pem -ca=ca.pem -addr=:8443 -backend=file -logfile=./protected.log
 
 - Startup rotation: if `./protected.log` exists when the server starts, it will be renamed to `protected-<ISO_TIMESTAMP>.log` and a fresh `protected.log` will be created.
 
 Run the client (example)
 
-- Using CA verification:
+- Using mTLS (Mutual TLS) verification:
 
-  ./merkle-client -addr=localhost:8443 -ca cert.pem
+  ./merkle-client -addr=localhost:8443 -ca ca.pem -tls-cert client-cert.pem -tls-key client-key.pem
 
-- Quick insecure test (local only):
+- Quick insecure test (local only, skips client cert):
 
   ./merkle-client -addr=localhost:8443
 
