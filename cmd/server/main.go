@@ -39,6 +39,7 @@ func parseFlags() cliConfig {
 	backend := flag.String("backend", "file", "output backend: file or syslog")
 	logfile := flag.String("logfile", "./protected.log", "path to log file when backend=file")
 	flag.Parse()
+
 	return cliConfig{
 		addr:      *addr,
 		tlsCert:   *tlsCert,
