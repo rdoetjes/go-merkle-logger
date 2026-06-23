@@ -30,7 +30,7 @@ func TestParseFlags(t *testing.T) {
 }
 
 func TestNewGRPCServerAndListener(t *testing.T) {
-	s := newGRPCServer(nil)
+	s := newGRPCServer(cliConfig{}, nil)
 	require.NotNil(t, s)
 
 	lis, err := createListener("127.0.0.1:0")
@@ -44,7 +44,7 @@ func TestRegisterAndServeStartsAndStops(t *testing.T) {
 	require.NoError(t, err)
 	defer lis.Close()
 
-	s := newGRPCServer(nil)
+	s := newGRPCServer(cliConfig{}, nil)
 
 	// create a simple file-based service in temp dir
 	p := filepath.Join(t.TempDir(), "protected.log")

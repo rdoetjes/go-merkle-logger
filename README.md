@@ -68,11 +68,14 @@ Create a test self-signed certificate with SANs for `localhost`/`127.0.0.1` as d
 
 Run the server
 
-Set an HMAC key (in production, use a secrets manager/KMS):
+Set an HMAC key and configure the mTLS ACL (in production, use a secrets manager/KMS):
 
   export MERKLE_HMAC_KEY="your-hmac-key-here"
+  export MERKLE_ALLOWED_CNS="merkle-client,audit-client"
   ./merkle-server -tls-cert=server-cert.pem -tls-key=server-key.pem -ca=ca.pem -addr=:8443 -backend=file -logfile=./protected.log
 
+- mTLS ACL: The server uses an Access Control List (ACL) to only allow clients with specific Common Names (CN). This can be configured via the `MERKLE_ALLOWED_CNS` environment variable (comma-separated) or the `-allowed-cn` flag.
+- 
 - Startup rotation: if `./protected.log` exists when the server starts, it will be renamed to `protected-<ISO_TIMESTAMP>.log` and a fresh `protected.log` will be created.
 
 Run the client (example)

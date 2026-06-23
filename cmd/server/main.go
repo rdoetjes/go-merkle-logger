@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"flag"
@@ -8,20 +9,25 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/status"
 	"phonax.com/merkle/internal/server"
 	"phonax.com/merkle/proto"
 )
 
 type cliConfig struct {
-	addr    string
-	tlsCert string
-	tlsKey  string
-	caCert  string
-	backend string
-	logfile string
+	addr      string
+	tlsCert   string
+	tlsKey    string
+	caCert    string
+	allowedCN string // comma-separated list
+	backend   string
+	logfile   string
 }
 
 func parseFlags() cliConfig {
@@ -29,10 +35,19 @@ func parseFlags() cliConfig {
 	tlsCert := flag.String("tls-cert", "", "TLS cert file (required)")
 	tlsKey := flag.String("tls-key", "", "TLS key file (required)")
 	caCert := flag.String("ca", "", "CA cert file for client authentication (optional, enables mTLS)")
+	allowedCN := flag.String("allowed-cn", os.Getenv("MERKLE_ALLOWED_CNS"), "Comma-separated list of allowed client Common Names (requires mTLS). Fallback to MERKLE_ALLOWED_CNS env var.")
 	backend := flag.String("backend", "file", "output backend: file or syslog")
 	logfile := flag.String("logfile", "./protected.log", "path to log file when backend=file")
 	flag.Parse()
-	return cliConfig{addr: *addr, tlsCert: *tlsCert, tlsKey: *tlsKey, caCert: *caCert, backend: *backend, logfile: *logfile}
+	return cliConfig{
+		addr:      *addr,
+		tlsCert:   *tlsCert,
+		tlsKey:    *tlsKey,
+		caCert:    *caCert,
+		allowedCN: *allowedCN,
+		backend:   *backend,
+		logfile:   *logfile,
+	}
 }
 
 func loadTLSCredentials(cfg cliConfig) (credentials.TransportCredentials, error) {
@@ -71,11 +86,56 @@ func createListener(addr string) (net.Listener, error) {
 	return net.Listen("tcp", addr)
 }
 
-func newGRPCServer(creds credentials.TransportCredentials) *grpc.Server {
+func newGRPCServer(cfg cliConfig, creds credentials.TransportCredentials) *grpc.Server {
+	var opts []grpc.ServerOption
 	if creds != nil {
-		return grpc.NewServer(grpc.Creds(creds))
+		opts = append(opts, grpc.Creds(creds))
 	}
-	return grpc.NewServer()
+
+	if cfg.caCert != "" && cfg.allowedCN != "" {
+		opts = append(opts, grpc.UnaryInterceptor(newACLInterceptor(cfg.allowedCN)))
+	}
+
+	return grpc.NewServer(opts...)
+}
+
+func newACLInterceptor(allowedCNs string) grpc.UnaryServerInterceptor {
+	allowed := make(map[string]bool)
+	for _, cn := range strings.Split(allowedCNs, ",") {
+		allowed[strings.TrimSpace(cn)] = true
+	}
+
+	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+		cn, err := extractCN(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		if !allowed[cn] {
+			log.Printf("ACL DENIED: client CN %q not in allowed list", cn)
+			return nil, status.Errorf(codes.PermissionDenied, "client CN %q is not authorized", cn)
+		}
+
+		return handler(ctx, req)
+	}
+}
+
+func extractCN(ctx context.Context) (string, error) {
+	p, ok := peer.FromContext(ctx)
+	if !ok {
+		return "", status.Error(codes.Unauthenticated, "no peer info found")
+	}
+
+	tlsInfo, ok := p.AuthInfo.(credentials.TLSInfo)
+	if !ok {
+		return "", status.Error(codes.Unauthenticated, "no TLS info found")
+	}
+
+	if len(tlsInfo.State.PeerCertificates) == 0 {
+		return "", status.Error(codes.Unauthenticated, "no client certificate provided")
+	}
+
+	return tlsInfo.State.PeerCertificates[0].Subject.CommonName, nil
 }
 
 func initService(cfg cliConfig) (*server.Service, error) {
@@ -104,7 +164,7 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	s := newGRPCServer(creds)
+	s := newGRPCServer(cfg, creds)
 
 	svc, err := initService(cfg)
 	if err != nil {

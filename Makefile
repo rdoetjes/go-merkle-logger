@@ -54,8 +54,10 @@ cert:
 	openssl x509 -req -days 365 -in client.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out client-cert.pem
 
 run-server:
-	@echo "Starting server with mTLS. Use MERKLE_HMAC_KEY env var to set HMAC key."
-	export MERKLE_HMAC_KEY=$${MERKLE_HMAC_KEY:-demo-key}; ./merkle-server -tls-cert=server-cert.pem -tls-key=server-key.pem -ca=ca.pem -addr=:8443 -backend=file -logfile=./protected.log
+	@echo "Starting server with mTLS and ACL. Use MERKLE_HMAC_KEY and MERKLE_ALLOWED_CNS env vars to configure."
+	export MERKLE_HMAC_KEY=$${MERKLE_HMAC_KEY:-demo-key}; \
+	export MERKLE_ALLOWED_CNS=$${MERKLE_ALLOWED_CNS:-merkle-client}; \
+	./merkle-server -tls-cert=server-cert.pem -tls-key=server-key.pem -ca=ca.pem -addr=:8443 -backend=file -logfile=./protected.log
 
 run-client:
 	./merkle-client -addr=localhost:8443 -ca ca.pem -tls-cert=client-cert.pem -tls-key=client-key.pem
